@@ -51,7 +51,7 @@ void testReadersWriters(int *pattern, int pattern_size)
   }
   else if(pid == 0)
   {
-	//printf(1,"child adding to shared counter\n");
+	printf(1,"child adding to shared counter\n");
 	int res = rwtest(pattern[i-1]);
 	if(pattern[i-1] == 0)
 		printf(2,"reader read from shared counter : %d\n",res);

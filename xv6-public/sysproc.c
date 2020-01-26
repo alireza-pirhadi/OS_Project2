@@ -132,6 +132,8 @@ sys_rwtest(void)
 		aquireTicketlock(1);
 	releaseTicketlock(lock_num);
 	
+	/*for(int i=0;i<10;i++)
+		cprintf("reader %d\n",myproc()->pid);*/
 	res = shared_data;
 	
 	aquireTicketlock(lock_num);
@@ -142,6 +144,8 @@ sys_rwtest(void)
   }
   else if( lock_num == 1){
 	aquireTicketlock(lock_num);
+	/*for(int i=0;i<100;i++)
+		cprintf("writer %d\n",myproc()->pid);*/
 	shared_data++;
 	releaseTicketlock(lock_num);
   }

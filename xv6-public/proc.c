@@ -674,33 +674,19 @@ aquireTicketlock(uint lock)
   struct proc *curproc = myproc();
   fetch_and_add(&(curproc->ticket_number[lock]), &(chosen_lock->newestTicket));
   
-  struct spinlock *lk = chosen_lock;
-  pushcli();
-  if(holding(lk))
-    panic("acquire");
-
-  while(curproc->ticket_number[lock] != chosen_lock->ticket)
+  if(curproc->ticket_number[lock] != chosen_lock->ticket)
   {
-	sleep(chosen_lock->name, chosen_lock);
-	/*acquire(&ptable.lock);  //DOC: yieldlock
-  	curproc->state = SLEEPING;
-  	sched();
-  	release(&ptable.lock);*/	
-	//pushcli();
-  	//cprintf("%d %d\n",curproc->ticket_number, mycpu()->apicid);
-  	//popcli();
+	curproc->state = SLEEPING;
+	acquire(&ptable.lock);
+	sched();
+	release(&ptable.lock);
   }
-
-   while(xchg(&lk->locked, 1) != 0);
 
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that the critical section's memory
   // references happen after the lock is acquired.
   __sync_synchronize();
-
-  // Record info about lock acquisition for debugging.
-  lk->cpu = mycpu();
-  getcallerpcs(&lk, lk->pcs);
+  
 }
 
 int
@@ -710,13 +696,6 @@ releaseTicketlock(uint lock)
   fetch_and_add(&(chosen_lock->ticket), &(chosen_lock->ticket));
   struct proc *curproc = myproc();
   
-  struct spinlock *lk = chosen_lock;
-  if(!holding(lk))
-    panic("release");
-
-  lk->pcs[0] = 0;
-  lk->cpu = 0;
-
   // Tell the C compiler and the processor to not move loads or stores
   // past this point, to ensure that all the stores in the critical
   // section are visible to other cores before the lock is released.
@@ -724,17 +703,14 @@ releaseTicketlock(uint lock)
   // stores; __sync_synchronize() tells them both not to.
   __sync_synchronize();
 
-  // Release the lock, equivalent to lk->locked = 0.
-  // This code can't use a C assignment, since it might
-  // not be atomic. A real OS would use C atomics here.
-  asm volatile("movl $0, %0" : "+m" (lk->locked) : );
-
-  popcli();
-
+  
+  acquire(&ptable.lock);
   for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-  	if(chosen_lock->ticket == p->ticket_number[lock])
-		wakeup(chosen_lock->name);
-		//p->state = RUNNABLE;
+  	if(chosen_lock->ticket == p->ticket_number[lock]){
+		p->state = RUNNABLE;
+	}
   }
+  release(&ptable.lock);
+  
   return curproc->ticket_number[lock];
 }

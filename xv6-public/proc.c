@@ -672,14 +672,14 @@ aquireTicketlock(uint lock)
 {
   struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
   struct proc *curproc = myproc();
-  fetch_and_add(&(curproc->ticket_number), &(chosen_lock->newestTicket));
+  fetch_and_add(&(curproc->ticket_number[lock]), &(chosen_lock->newestTicket));
   
   struct spinlock *lk = chosen_lock;
   pushcli();
   if(holding(lk))
     panic("acquire");
 
-  while(curproc->ticket_number != chosen_lock->ticket)
+  while(curproc->ticket_number[lock] != chosen_lock->ticket)
   {
 	sleep(chosen_lock->name, chosen_lock);
 	/*acquire(&ptable.lock);  //DOC: yieldlock
@@ -732,9 +732,9 @@ releaseTicketlock(uint lock)
   popcli();
 
   for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-  	if(chosen_lock->ticket == p->ticket_number)
+  	if(chosen_lock->ticket == p->ticket_number[lock])
 		wakeup(chosen_lock->name);
 		//p->state = RUNNABLE;
   }
-  return curproc->ticket_number;
+  return curproc->ticket_number[lock];
 }

@@ -115,13 +115,37 @@ sys_ticketlockTest(void)
 int
 sys_rwinit(void)
 {
+  initTicketlock(0);
+  initTicketlock(1);
   return 1;
 }
 
 int
 sys_rwtest(void)
 {
-  return 1;
+  int lock_num, res = 0;
+  argint(0, &lock_num);
+  if(lock_num == 0){
+	aquireTicketlock(lock_num);
+	reader_count++;
+	if(reader_count == 1)
+		aquireTicketlock(1);
+	releaseTicketlock(lock_num);
+	
+	res = shared_data;
+	
+	aquireTicketlock(lock_num);
+	reader_count--;
+	if(reader_count == 0)
+		releaseTicketlock(1);
+	releaseTicketlock(lock_num);
+  }
+  else if( lock_num == 1){
+	aquireTicketlock(lock_num);
+	shared_data++;
+	releaseTicketlock(lock_num);
+  }
+  return res;
 }
 
 int

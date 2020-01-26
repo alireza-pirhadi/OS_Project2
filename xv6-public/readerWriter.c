@@ -8,7 +8,7 @@ int main(){
   char argv[100];
   
   printf(1,"enter pattern for reader/writer test\n");
-  read_size = read(0, argv, sizeof(argv));
+  int read_size = read(0, argv, sizeof(argv));
   argv[read_size - 1] = '\0';
   int pattern[100], i;
   for(i = 0; argv[i+1] != '\0' ;i++){
@@ -33,7 +33,7 @@ void testReadersWriters(int *pattern, int pattern_size)
   rwinit();
 
   pid = fork();
-  for (int i=1; i<pattern_size; i++){  
+  for (i=1; i<pattern_size; i++){  
 	if(pid < 0)
   	{
   		printf(1,"fork failed\n");
@@ -51,7 +51,7 @@ void testReadersWriters(int *pattern, int pattern_size)
   }
   else if(pid == 0)
   {
-	printf(1,"child adding to shared counter\n");
+	//printf(1,"child adding to shared counter\n");
 	int res = rwtest(pattern[i-1]);
 	if(pattern[i-1] == 0)
 		printf(2,"reader read from shared counter : %d\n",res);

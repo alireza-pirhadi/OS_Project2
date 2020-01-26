@@ -43,10 +43,11 @@ struct timeVariables {
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 int alg_number;
 int shared_data;
+int reader_count;
 
 // Per-process state
 struct proc {
-  uint ticket_number;
+  uint ticket_number[3];
   int number_syscall_invokes[24];
   int priority;
   unsigned long long calculatedPriority;

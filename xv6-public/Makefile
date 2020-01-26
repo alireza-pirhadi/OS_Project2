@@ -186,6 +186,7 @@ UPROGS=\
 	_originalSchedTest\
 	_PrioritySchedTest\
 	_lockTest\
+	_readerWriter\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -260,6 +261,7 @@ EXTRA=\
 	originalSchedTest.c\
 	PrioritySchedTest.c\
 	lockTest.c\
+	readerWriter.c\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\

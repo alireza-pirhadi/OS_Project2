@@ -126,6 +126,9 @@ void            changeAlgorithm(int);
 int 		increment_tick(void);
 void 		update_timeVariables(void);
 int 		getTimeVariables(struct timeVariables*);
+void		initTicketlock(uint);
+void		aquireTicketlock(uint);
+int		releaseTicketlock(uint);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

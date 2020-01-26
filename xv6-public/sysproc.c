@@ -97,6 +97,34 @@ sys_waitForChild(void)
 }
 
 int
+sys_ticketlockInit(void)
+{
+  initTicketlock(2);
+  return 1;
+}
+
+int
+sys_ticketlockTest(void)
+{
+  aquireTicketlock(2);
+  for(int i=0;i<10;i++)
+	cprintf("%d\n",myproc()->pid);
+  return releaseTicketlock(2);
+}
+
+int
+sys_rwinit(void)
+{
+  return 1;
+}
+
+int
+sys_rwtest(void)
+{
+  return 1;
+}
+
+int
 sys_sbrk(void)
 {
   int addr;

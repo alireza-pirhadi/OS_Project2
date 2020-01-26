@@ -185,6 +185,7 @@ UPROGS=\
 	_getCountTest\
 	_originalSchedTest\
 	_PrioritySchedTest\
+	_lockTest\
 
 fs.img: mkfs README $(UPROGS)
 	./mkfs fs.img README $(UPROGS)
@@ -258,6 +259,7 @@ EXTRA=\
 	getCountTest.c\
 	originalSchedTest.c\
 	PrioritySchedTest.c\
+	lockTest.c\
 	printf.c umalloc.c\
 	README dot-bochsrc *.pl toc.* runoff runoff1 runoff.list\
 	.gdbinit.tmpl gdbutil\

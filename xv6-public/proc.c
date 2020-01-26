@@ -12,6 +12,10 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
+struct spinlock general_lock;
+struct spinlock reader_lock;
+struct spinlock writer_lock;
+
 static struct proc *initproc;
 
 int nextpid = 1;
@@ -24,6 +28,9 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  initlock(&general_lock, "general");
+  initlock(&reader_lock, "reader");
+  initlock(&writer_lock, "writer");
 }
 
 // Must be called with interrupts disabled
@@ -650,4 +657,84 @@ int getTimeVariables(struct timeVariables* time_variables)
     // Wait for children to exit.  (See wakeup1 call in proc_exit.)
     sleep(curproc, &ptable.lock);  //DOC: wait-sleep
   }
+}
+
+void
+initTicketlock(uint lock)
+{
+  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  chosen_lock->ticket = 1;
+  chosen_lock->newestTicket = 0;
+}
+
+void
+aquireTicketlock(uint lock)
+{
+  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  struct proc *curproc = myproc();
+  fetch_and_add(&(curproc->ticket_number), &(chosen_lock->newestTicket));
+  
+  struct spinlock *lk = chosen_lock;
+  pushcli();
+  if(holding(lk))
+    panic("acquire");
+
+  while(curproc->ticket_number != chosen_lock->ticket)
+  {
+	sleep(chosen_lock->name, chosen_lock);
+	/*acquire(&ptable.lock);  //DOC: yieldlock
+  	curproc->state = SLEEPING;
+  	sched();
+  	release(&ptable.lock);*/	
+	//pushcli();
+  	//cprintf("%d %d\n",curproc->ticket_number, mycpu()->apicid);
+  	//popcli();
+  }
+
+   while(xchg(&lk->locked, 1) != 0);
+
+  // Tell the C compiler and the processor to not move loads or stores
+  // past this point, to ensure that the critical section's memory
+  // references happen after the lock is acquired.
+  __sync_synchronize();
+
+  // Record info about lock acquisition for debugging.
+  lk->cpu = mycpu();
+  getcallerpcs(&lk, lk->pcs);
+}
+
+int
+releaseTicketlock(uint lock)
+{
+  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  fetch_and_add(&(chosen_lock->ticket), &(chosen_lock->ticket));
+  struct proc *curproc = myproc();
+  
+  struct spinlock *lk = chosen_lock;
+  if(!holding(lk))
+    panic("release");
+
+  lk->pcs[0] = 0;
+  lk->cpu = 0;
+
+  // Tell the C compiler and the processor to not move loads or stores
+  // past this point, to ensure that all the stores in the critical
+  // section are visible to other cores before the lock is released.
+  // Both the C compiler and the hardware may re-order loads and
+  // stores; __sync_synchronize() tells them both not to.
+  __sync_synchronize();
+
+  // Release the lock, equivalent to lk->locked = 0.
+  // This code can't use a C assignment, since it might
+  // not be atomic. A real OS would use C atomics here.
+  asm volatile("movl $0, %0" : "+m" (lk->locked) : );
+
+  popcli();
+
+  for(struct proc *p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+  	if(chosen_lock->ticket == p->ticket_number)
+		wakeup(chosen_lock->name);
+		//p->state = RUNNABLE;
+  }
+  return curproc->ticket_number;
 }

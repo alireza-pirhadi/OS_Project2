@@ -12,9 +12,14 @@ struct {
   struct proc proc[NPROC];
 } ptable;
 
-struct spinlock general_lock;
-struct spinlock reader_lock;
-struct spinlock writer_lock;
+struct lock{
+  uint ticket;
+  uint newestTicket;
+};
+
+struct lock general_lock;
+struct lock reader_lock;
+struct lock writer_lock;
 
 static struct proc *initproc;
 
@@ -28,9 +33,9 @@ void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
-  initlock(&general_lock, "general");
+  /*initlock(&general_lock, "general");
   initlock(&reader_lock, "reader");
-  initlock(&writer_lock, "writer");
+  initlock(&writer_lock, "writer");*/
 }
 
 // Must be called with interrupts disabled
@@ -662,7 +667,7 @@ int getTimeVariables(struct timeVariables* time_variables)
 void
 initTicketlock(uint lock)
 {
-  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  struct lock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
   chosen_lock->ticket = 1;
   chosen_lock->newestTicket = 0;
 }
@@ -670,7 +675,7 @@ initTicketlock(uint lock)
 void
 aquireTicketlock(uint lock)
 {
-  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  struct lock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
   struct proc *curproc = myproc();
   fetch_and_add(&(curproc->ticket_number[lock]), &(chosen_lock->newestTicket));
   
@@ -692,7 +697,7 @@ aquireTicketlock(uint lock)
 int
 releaseTicketlock(uint lock)
 {
-  struct spinlock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
+  struct lock *chosen_lock = lock == 0? &reader_lock : lock == 1? &writer_lock : &general_lock;
   fetch_and_add(&(chosen_lock->ticket), &(chosen_lock->ticket));
   struct proc *curproc = myproc();
   
